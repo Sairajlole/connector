@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geofencing Attendance</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgb(0, 0, 0);
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #78dc15;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Geofencing Attendance</h1>
+        <label for="employeeSelect">Select Employee:</label>
+        <select id="employeeSelect">
+            <option value="" disabled selected>Select an employee</option>
+            <option value="shivendra">Shivendra</option>
+            <option value="chandekar">Chandekar</option>
+            <option value="abhi">Abhi</option>
+            <option value="sairaj">sairaj</option>
+            <option value="Nilesh sir">Nilesh sir</option>
+            <option value="sudhansu sir">sudhanshu Sharma sir</option>
+            <option value="Sanjay sir">sanjay  Deshmukh sir</option>
+            
+        </select>
+        <p id="message" class="status">Checking location...</p>
+        <button id="markAttendance" disabled>Mark Attendance</button>
+    </div>
+
+    <script>
+        
+        const GEOFENCE_LAT = 18.459958658038246; 
+        const GEOFENCE_LNG =  73.82228910539048 ;
+        const GEOFENCE_RADIUS = 100;
+
+        const messageElement = document.getElementById('message');
+        const markAttendanceButton = document.getElementById('markAttendance');
+        const employeeSelect = document.getElementById('employeeSelect');
+
+        
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; 
+            const φ1 = (lat1 * Math.PI) / 180;
+            const φ2 = (lat2 * Math.PI) / 180;
+            const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+            const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+            const a =
+                Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c;
+        }
+
+        
+        function checkLocation() {
+            if (!navigator.geolocation) {
+                messageElement.textContent = 'Geolocation is not supported by your browser.';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude, longitude } = position.coords;
+                    const distance = calculateDistance(
+                        latitude,
+                        longitude,
+                        GEOFENCE_LAT,
+                        GEOFENCE_LNG
+                    );
+
+                    if (distance <= GEOFENCE_RADIUS) {
+                        messageElement.textContent = 'You are within the geofence. Select an employee to mark attendance.';
+                        markAttendanceButton.disabled = false;
+                    } else {
+                        messageElement.textContent = 'You are outside the geofence. Attendance cannot be marked.';
+                        markAttendanceButton.disabled = true;
+                    }
+                },
+                (error) => {
+                    messageElement.textContent = `Error retrieving location: ${error.message}`;
+                }
+            );
+        }
+
+        
+        markAttendanceButton.addEventListener('click', async () => {
+    const selectedEmployee = employeeSelect.value;
+
+    if (!selectedEmployee) {
+        alert('Please select an employee.');
+        return;
+    }
+
+    const attendanceData = {
+        employeeId: selectedEmployee,
+        timestamp: new Date().toISOString(),
+    };
+
+    try {
+        const response = await fetch('http://localhost:5500/attendance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(attendanceData),
+        });
+
+        if (response.ok) {
+            alert(`Attendance marked successfully for ${selectedEmployee}!`);
+        } else {
+            alert('Error marking attendance.');
+        }
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+});
+
+
+
+// Fetch records on page load
+//fetchAttendanceRecords();
+checkLocation();
+
+
+       
+    </script>
+</body>
+</html>
